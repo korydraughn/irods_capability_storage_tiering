@@ -532,9 +532,15 @@ namespace irods {
                         _source_resource.c_str(),
                         violating_query_string.c_str(),
                         violating_query_type);
+
+                    rodsLog(LOG_NOTICE, "Checking if row is empty ...");
+
                     if(_results.size() == 0) {
                         return;
                     }
+
+                    rodsLog(LOG_NOTICE, "Row contains multiple columns.  Number of columns => [%d]", _results.size());
+                    rodsLog(LOG_NOTICE, "Checking if the row contains at least 4 columns ...");
 
                     // users could possbily configure an incorrect query
                     if(_results.size() < 4) {
@@ -546,6 +552,9 @@ namespace irods {
                         return;
                     }
 
+                    rodsLog(LOG_NOTICE, "Row contains at least 4 columns.");
+                    rodsLog(LOG_NOTICE, "Checking path [coll_name = %s][data_object_name = %s] ...", _results[1].c_str(), _results[0].c_str());
+
                     auto object_path = _results[1]; // coll name
                     const auto& vps  = get_virtual_path_separator();
                     if( !boost::ends_with(object_path, vps)) {
@@ -553,20 +562,29 @@ namespace irods {
                     }
                     object_path += _results[0]; // data name
 
-                    if(std::end(object_is_processed) !=
-                       object_is_processed.find(object_path)) {
+                    rodsLog(LOG_NOTICE, "Final object path => [%s]", object_path.c_str());
+                    rodsLog(LOG_NOTICE, "Checking if the object has already been processed ...");
+
+                    if(std::end(object_is_processed) != object_is_processed.find(object_path)) {
+                        rodsLog(LOG_NOTICE, "[%s] has been processed.  Skipping ...", object_path.c_str());
                         return;
                     }
 
                     object_is_processed[object_path] = 1;
 
+                    rodsLog(LOG_NOTICE, "Marked object [%s] as processed.", object_path.c_str());
+                    rodsLog(LOG_NOTICE, "Checking if replicas should be preserved ...");
+
                     if(preserve_replicas) {
-                        if(skip_object_in_lower_tier(
-                               object_path,
-                               _partial_list)) {
+                        rodsLog(LOG_NOTICE, "Replicas must be preserved.  Checking if object should be skipped in lower tier ...");
+
+                        if(skip_object_in_lower_tier(object_path, _partial_list)) {
+                            rodsLog(LOG_NOTICE, "Skipping object [%s] in lower tier ...", object_path.c_str());
                             return;
                         }
                     }
+
+                    rodsLog(LOG_NOTICE, "Queuing data movement ...");
 
                     queue_data_movement(
                         config_.instance_name,
