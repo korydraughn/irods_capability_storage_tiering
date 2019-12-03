@@ -525,6 +525,7 @@ namespace irods {
                 const auto  violating_query_type   = query<rsComm_t>::convert_string_to_query_type(q_itr.second);
                 const auto& violating_query_string = q_itr.first;
                 auto job = [&](const result_row& _results) {
+                    try {
                     rodsLog(
                         config_.data_transfer_log_level_value,
                         "found %ld objects for resc [%s] with query [%s] type [%d]",
@@ -597,6 +598,11 @@ namespace irods {
                         get_verification_for_resc(_destination_resource),
                         get_preserve_replicas_for_resc(_source_resource),
                         get_data_movement_parameters_for_resource(_source_resource));
+                    }
+                    catch (...) {
+                        rodsLog(LOG_ERROR, "DEFINITELY CAUGHT SOMETHING IN THE QUERY_PROCESSOR-JOB. DON'T KNOW WHAT IT IS, BUT IT'S HERE! RETHROWING ...");
+                        throw;
+                    }
 
                 }; // job
 
@@ -673,10 +679,14 @@ namespace irods {
         const std::string& _destination_resource,
         const std::string& _verification_type,
         const bool         _preserve_replicas,
-        const std::string& _data_movement_params) {
+        const std::string& _data_movement_params)
+    {
+        rodsLog(LOG_NOTICE, "XXXXX In queue_data_movement");
+
         using json = nlohmann::json;
 
         set_migration_metadata_flag_for_object(_object_path);
+        rodsLog(LOG_NOTICE, "called set_migration_metadata_flag_for_object");
 
         json rule_obj;
         rule_obj["rule-engine-operation"]     = policy::data_movement;
@@ -689,12 +699,15 @@ namespace irods {
         rule_obj["destination-resource"]      = _destination_resource;
         rule_obj["preserve-replicas"]         = _preserve_replicas,
         rule_obj["verification-type"]         = _verification_type;
+        rodsLog(LOG_NOTICE, "built rule info object as JSON");
 
+        rodsLog(LOG_NOTICE, "calling _delayExec ...");
         const auto delay_err = _delayExec(
                                    rule_obj.dump().c_str(),
                                    "",
                                    _data_movement_params.c_str(),
                                    rei_);
+        rodsLog(LOG_NOTICE, "_delayExec returned");
         if(delay_err < 0) {
             THROW(
                 delay_err,
@@ -710,6 +723,7 @@ namespace irods {
             _object_path.c_str(),
             _source_resource.c_str(),
             _destination_resource.c_str());
+        rodsLog(LOG_NOTICE, "returning from queue_data_movement");
 
     } // queue_data_movement
 
