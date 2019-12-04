@@ -843,6 +843,7 @@ namespace irods {
     template <typename Function>
     int exec_as_user(rsComm_t& _comm, const std::string& _user_name, Function _func)
     {
+#if 0
         auto& user = _comm.clientUser;
 
         if (user.authInfo.authFlag < LOCAL_PRIV_USER_AUTH) {
@@ -857,6 +858,7 @@ namespace irods {
         irods::at_scope_exit<std::function<void()>> at_scope_exit{[&user, &old_user_name] {
             rstrcpy(user.userName, old_user_name.c_str(), MAX_NAME_LEN);
         }};
+#endif
 
         return _func();
     }
@@ -878,6 +880,7 @@ namespace irods {
            const_cast<char*>(access_time.c_str()),
            const_cast<char*>(config_.migration_scheduled_flag.c_str())};
 
+        rodsLog(LOG_NOTICE, "_user_name                       => %s", _user_name.c_str());
         rodsLog(LOG_NOTICE, "_object_path                     => %s", _object_path.c_str());
         rodsLog(LOG_NOTICE, "config_.access_time_attribute    => %s", config_.access_time_attribute.c_str());
         rodsLog(LOG_NOTICE, "access_time                      => %s", access_time.c_str());
