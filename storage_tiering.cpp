@@ -8,6 +8,7 @@
 #include "irods_hierarchy_parser.hpp"
 #include "irods_resource_manager.hpp"
 #include "irods_resource_backport.hpp"
+#include "irods_at_scope_exit.hpp"
 #include "query_processor.hpp"
 
 #include "rsModAVUMetadata.hpp"
@@ -27,6 +28,7 @@
 
 #include "json.hpp"
 #include <tuple>
+#include <functional>
 
 extern irods::resource_manager resc_mgr;
 
@@ -658,7 +660,7 @@ namespace irods {
         const std::string& _data_movement_params) {
         using json = nlohmann::json;
 
-        set_migration_metadata_flag_for_object(_object_path);
+        set_migration_metadata_flag_for_object(_user_name, _object_path);
 
         json rule_obj;
         rule_obj["rule-engine-operation"]     = policy::data_movement;
@@ -838,7 +840,28 @@ namespace irods {
 
     } // apply_policy_for_tier_group
 
+    template <typename Function>
+    int exec_as_user(rsComm_t& _comm, const std::string& _user_name, Function _func)
+    {
+        auto& user = _comm->clientUser;
+
+        if (user.authInfo.authFlag < LOCAL_PRIV_USER_AUTH) {
+            THROW(CAT_INSUFFICIENT_PRIVILEGE_LEVEL, "Cannot switch user");
+        }
+
+        const std::string old_user_name = user.userName;
+
+        rstrcpy(user.userName, _user_name.data(), NAME_LEN);
+
+        irods::at_scope_exit<std::function<void()>> at_scope_exit{[&user, &old_user_name] {
+            rstrcpy(user.userName, old_user_name.c_str(), MAX_NAME_LEN);
+        }};
+
+        return _func();
+    }
+
     void storage_tiering::set_migration_metadata_flag_for_object(
+        const std::string& _user_name,
         const std::string& _object_path) {
         auto access_time = get_metadata_for_data_object(
                                config_.access_time_attribute,
@@ -859,7 +882,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, "access_time                      => %s", access_time.c_str());
         rodsLog(LOG_NOTICE, "config_.migration_scheduled_flag => %s", config_.migration_scheduled_flag.c_str());
 
-        auto status = rsModAVUMetadata(comm_, &set_op);
+        const auto status = exec_as_user(*comm_, _user_name, [comm_, &set_op] {
+            return rsModAVUMetadata(comm_, &set_op);
+        });
+
         if(status < 0) {
            THROW(
                status,
@@ -869,6 +895,7 @@ namespace irods {
     } // set_migration_metadata_flag_for_object
 
     void storage_tiering::unset_migration_metadata_flag_for_object(
+        const std::string& _user_name,
         const std::string& _object_path) {
         auto access_time = get_metadata_for_data_object(
                                config_.access_time_attribute,
@@ -881,14 +908,16 @@ namespace irods {
            const_cast<char*>(access_time.c_str()),
            nullptr};
 
-       auto status = rsModAVUMetadata(comm_, &set_op);
-       if(status < 0) {
-           THROW(
-               status,
-               boost::format("failed to unset migration scheduled flag for [%s]")
-               % _object_path);
-       }
+        const auto status = exec_as_user(*comm_, _user_name, [comm_, &set_op] {
+            return rsModAVUMetadata(comm_, &set_op);
+        });
 
+        if(status < 0) {
+            THROW(
+                status,
+                boost::format("failed to unset migration scheduled flag for [%s]")
+                % _object_path);
+        }
     } // unset_migration_metadata_flag_for_object
 
     void storage_tiering::apply_tier_group_metadata_to_object(
@@ -899,7 +928,7 @@ namespace irods {
         const std::string& _source_resource,
         const std::string& _destination_resource) {
         try {
-            unset_migration_metadata_flag_for_object(_object_path);
+            unset_migration_metadata_flag_for_object(_user_name, _object_path);
         }
         catch(const exception&) {
         }
