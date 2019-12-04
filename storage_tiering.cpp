@@ -882,7 +882,7 @@ namespace irods {
         rodsLog(LOG_NOTICE, "access_time                      => %s", access_time.c_str());
         rodsLog(LOG_NOTICE, "config_.migration_scheduled_flag => %s", config_.migration_scheduled_flag.c_str());
 
-        const auto status = exec_as_user(*comm_, _user_name, [comm_, &set_op] {
+        const auto status = exec_as_user(*comm_, _user_name, [this, &set_op] {
             return rsModAVUMetadata(comm_, &set_op);
         });
 
@@ -908,7 +908,7 @@ namespace irods {
            const_cast<char*>(access_time.c_str()),
            nullptr};
 
-        const auto status = exec_as_user(*comm_, _user_name, [comm_, &set_op] {
+        const auto status = exec_as_user(*comm_, _user_name, [this, &set_op] {
             return rsModAVUMetadata(comm_, &set_op);
         });
 
