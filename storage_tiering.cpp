@@ -844,6 +844,8 @@ namespace irods {
                                config_.access_time_attribute,
                                _object_path);
 
+        rodsLog(LOG_NOTICE, "In [%s]", __func__);
+
         modAVUMetadataInp_t set_op{
            "set",
            "-d",
@@ -851,6 +853,11 @@ namespace irods {
            const_cast<char*>(config_.access_time_attribute.c_str()),
            const_cast<char*>(access_time.c_str()),
            const_cast<char*>(config_.migration_scheduled_flag.c_str())};
+
+        rodsLog(LOG_NOTICE, "_object_path                     => %s", _object_path.c_str());
+        rodsLog(LOG_NOTICE, "config_.access_time_attribute    => %s", config_.access_time_attribute.c_str());
+        rodsLog(LOG_NOTICE, "access_time                      => %s", access_time.c_str());
+        rodsLog(LOG_NOTICE, "config_.migration_scheduled_flag => %s", config_.migration_scheduled_flag.c_str());
 
         auto status = rsModAVUMetadata(comm_, &set_op);
         if(status < 0) {
