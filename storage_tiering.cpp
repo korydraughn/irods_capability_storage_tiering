@@ -843,7 +843,7 @@ namespace irods {
     template <typename Function>
     int exec_as_user(rsComm_t& _comm, const std::string& _user_name, Function _func)
     {
-        auto& user = _comm->clientUser;
+        auto& user = _comm.clientUser;
 
         if (user.authInfo.authFlag < LOCAL_PRIV_USER_AUTH) {
             THROW(CAT_INSUFFICIENT_PRIVILEGE_LEVEL, "Cannot switch user");
