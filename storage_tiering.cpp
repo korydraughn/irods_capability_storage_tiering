@@ -846,7 +846,7 @@ namespace irods {
         auto& user = _comm.clientUser;
 
         if (user.authInfo.authFlag < LOCAL_PRIV_USER_AUTH) {
-            THROW(CAT_INSUFFICIENT_PRIVILEGE_LEVEL, "Cannot switch user [from=" + _user.userName +
+            THROW(CAT_INSUFFICIENT_PRIVILEGE_LEVEL, "Cannot switch user [from=" + std::string{_user.userName} +
                                                     ", to=" + _user_name + "]");
         }
 
