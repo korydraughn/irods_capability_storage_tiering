@@ -1,14 +1,16 @@
-
-
 #ifndef IRODS_STORAGE_TIERING_HPP
 #define IRODS_STORAGE_TIERING_HPP
 
-#include <list>
-#include <boost/any.hpp>
-#include <string>
+#include "storage_tiering_configuration.hpp"
 
 #include <irods/rcMisc.h>
-#include "storage_tiering_configuration.hpp"
+
+#include <boost/any.hpp>
+
+#include <list>
+#include <string>
+
+struct RuleExecInfo;
 
 namespace irods {
     using resource_index_map = std::map<std::string, std::string>;
@@ -27,7 +29,7 @@ namespace irods {
 
         storage_tiering(
             rcComm_t*          _comm,
-            ruleExecInfo_t*    _rei,
+            RuleExecInfo*      _rei,
             const std::string& _instance_name);
 
         void apply_policy_for_tier_group(
@@ -169,7 +171,7 @@ namespace irods {
             const std::string&  _destination_resource);
 
         // Attributes
-        ruleExecInfo_t*               rei_;
+        RuleExecInfo*                 rei_;
         rcComm_t*                     comm_;
         storage_tiering_configuration config_;
 
@@ -178,4 +180,3 @@ namespace irods {
 }; // namespace irods
 
 #endif // IRODS_STORAGE_TIERING_HPP
-
