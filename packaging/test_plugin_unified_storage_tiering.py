@@ -407,6 +407,122 @@ class TestStorageTieringPlugin(ResourceBase, unittest.TestCase):
                     finally:
                         alice_session.assert_icommand('irm -f ' + cmd_filename)
 
+class TestStorageTieringPlugin__issue_175(session.make_sessions_mixin([('otherrods', 'rods')], [('alice', 'apass')]), unittest.TestCase):
+
+    def setUp(self):
+        super(TestStorageTieringPlugin__issue_175, self).setUp()
+
+        self.admin0 = self.admin_sessions[0];
+        self.user0 = self.user_sessions[0]
+
+        self.admin0.assert_icommand('iqdel -a')
+        self.admin0.assert_icommand('iadmin mkresc ufs0 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs0', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc ufs1 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs1', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc ufs2 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs2', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc ufs3 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs3', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc ufs4 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs4', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc ufs5 unixfilesystem '+test.settings.HOSTNAME_1 +':/tmp/irods/ufs5', 'STDOUT_SINGLELINE', 'unixfilesystem')
+        self.admin0.assert_icommand('iadmin mkresc rnd0 random', 'STDOUT_SINGLELINE', 'random')
+        self.admin0.assert_icommand('iadmin mkresc rnd1 random', 'STDOUT_SINGLELINE', 'random')
+        self.admin0.assert_icommand('iadmin mkresc rnd2 random', 'STDOUT_SINGLELINE', 'random')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd0 ufs0')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd0 ufs1')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd1 ufs2')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd1 ufs3')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd2 ufs4')
+        self.admin0.assert_icommand('iadmin addchildtoresc rnd2 ufs5')
+
+        self.admin0.assert_icommand('imeta add -R rnd0 irods::storage_tiering::group example_group 0')
+        self.admin0.assert_icommand('imeta add -R rnd1 irods::storage_tiering::group example_group 1')
+        self.admin0.assert_icommand('imeta add -R rnd2 irods::storage_tiering::group example_group 2')
+        self.admin0.assert_icommand('imeta add -R rnd0 irods::storage_tiering::time 5')
+        self.admin0.assert_icommand('imeta add -R rnd1 irods::storage_tiering::time 15')
+        self.admin0.assert_icommand('''imeta set -R rnd1 irods::storage_tiering::query "SELECT DATA_NAME, COLL_NAME, USER_NAME, DATA_REPL_NUM where RESC_NAME = 'ufs2' || = 'ufs3' and META_DATA_ATTR_NAME = 'irods::access_time' and META_DATA_ATTR_VALUE < 'TIME_CHECK_STRING'"''')
+        self.admin0.assert_icommand('imeta add -R rnd0 irods::storage_tiering::minimum_delay_time_in_seconds 1')
+        self.admin0.assert_icommand('imeta add -R rnd0 irods::storage_tiering::maximum_delay_time_in_seconds 2')
+        self.admin0.assert_icommand('imeta add -R rnd1 irods::storage_tiering::minimum_delay_time_in_seconds 1')
+        self.admin0.assert_icommand('imeta add -R rnd1 irods::storage_tiering::maximum_delay_time_in_seconds 2')
+
+        self.admin0.assert_icommand('ilsresc -l', 'STDOUT_SINGLELINE', 'random')
+
+    def tearDown(self):
+        super(TestStorageTieringPlugin__issue_175, self).tearDown()
+
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd0 ufs0')
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd0 ufs1')
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd1 ufs2')
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd1 ufs3')
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd2 ufs4')
+        self.admin0.run_icommand('iadmin rmchildfromresc rnd2 ufs5')
+
+        self.admin0.run_icommand('iadmin rmresc rnd0')
+        self.admin0.run_icommand('iadmin rmresc rnd1')
+        self.admin0.run_icommand('iadmin rmresc rnd2')
+        self.admin0.run_icommand('iadmin rmresc ufs0')
+        self.admin0.run_icommand('iadmin rmresc ufs1')
+        self.admin0.run_icommand('iadmin rmresc ufs2')
+        self.admin0.run_icommand('iadmin rmresc ufs3')
+        self.admin0.run_icommand('iadmin rmresc ufs4')
+        self.admin0.run_icommand('iadmin rmresc ufs5')
+        self.admin0.run_icommand('iadmin rum')
+
+    @staticmethod
+    def get_data_object_access_time(session, logical_path):
+        coll_name = os.path.dirname(logical_path)
+        data_name = os.path.basename(logical_path)
+        gql = "select META_DATA_ATTR_VALUE where COLL_NAME = '{}' and DATA_NAME = '{}' and META_DATA_ATTR_NAME = 'irods::access_time'"
+        return session.run_icommand(['iquest', '%s', gql.format(coll_name, data_name, str(replica_number))])[0].strip()
+
+    def test_user_with_read_permissions_can_download_data_object(self):
+        with storage_tiering_configured():
+            IrodsController().restart(test_mode=True)
+
+            test_file = os.path.join(self.admin0.local_session_dir, 'issue_175.txt')
+            data_object = os.path.join(self.admin0.session_collection, os.path.basename(test_file))
+
+            try:
+                # As self.admin0, put a file into iRODS, give self.user0 read permission on it, and
+                # wait for it to be staged to the next tier.
+                lib.create_local_testfile(test_file)
+                self.admin0.assert_icommand(['iput', '-R', 'rnd0', test_file])
+                self.admin0.assert_icommand(['ils', '-A'], 'STDOUT') # For debugging
+                self.admin0.assert_icommand(['ichmod', 'read', self.user0.username, os.path.dirname(data_object)])
+                self.admin0.assert_icommand(['ichmod', 'read', self.user0.username, data_object])
+                self.admin0.assert_icommand(['ils', '-A', data_object], 'STDOUT', 'ACL - {0}#{1}:read'.format(self.user0.username, self.user0.zone_name))
+
+                # Wait for the data object to be staged to tier 1.
+                sleep(5)
+                invoke_storage_tiering_rule()
+                delay_assert_icommand(self.admin0, ['ils', '-L', data_object], 'STDOUT', 'rnd1')
+
+                # Wait for the data object to be staged to tier 2.
+                sleep(15)
+                invoke_storage_tiering_rule()
+                delay_assert_icommand(self.admin0, ['ils', '-L', data_object], 'STDOUT', 'rnd2')
+
+                # Capture the access time of the data object.
+                old_atime = get_data_object_access_time(self.admin0, data_object)
+
+                # Show that self.user0 can retrieve the data object without issue.
+                # This will cause the data object to be staged back to tier 1.
+                sleep(1)
+                self.user0.assert_icommand(['iget', data_object, '-'], 'STDOUT', 'TESTFILE')
+                delay_assert_icommand(self.admin0, ['ils', '-L', data_object], 'STDOUT_SINGLELINE', 'rnd0')
+
+                new_atime = get_data_object_access_time(self.admin0, data_object)
+                self.assertGreater(int(new_atime), int(old_atime))
+
+            finally:
+                self.admin0.run_icommand(['irm', '-f', data_object])
+
+    def test_storage_tiering_supports_replica_open_and_replica_close_PEPs(self):
+        with storage_tiering_configured():
+            IrodsController().restart(test_mode=True)
+
+            # 1. istream a data object into a resource under a tier group.
+            # 2. let it be tiered to a different resource.
+            # 3. use istream to read it back.
+
 class TestStorageTieringPluginMultiGroup(ResourceBase, unittest.TestCase):
     def setUp(self):
         super(TestStorageTieringPluginMultiGroup, self).setUp()
