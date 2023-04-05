@@ -1,44 +1,42 @@
-// =-=-=-=-=-=-=-
-// irods includes
-#include <irods/irods_re_plugin.hpp>
-#include "storage_tiering.hpp"
-#include <irods/irods_re_ruleexistshelper.hpp>
-#include "storage_tiering_utilities.hpp"
-#include <irods/irods_resource_backport.hpp>
+#include "data_verification_utilities.hpp"
+#include "exec_as_user.hpp"
 #include "proxy_connection.hpp"
+#include "storage_tiering.hpp"
+#include "storage_tiering_utilities.hpp"
 
+#include <irods/apiNumber.h>
+#include <irods/client_connection.hpp>
+#include <irods/dataObjRepl.h>
+#include <irods/dataObjTrim.h>
+#include <irods/filesystem.hpp>
+#include <irods/irods_re_plugin.hpp>
+#include <irods/irods_re_ruleexistshelper.hpp>
+#include <irods/irods_resource_backport.hpp>
+#include <irods/irods_server_api_call.hpp>
+#include <irods/irods_virtual_path.hpp>
+#include <irods/objDesc.hpp>
+#include <irods/physPath.hpp>
+#include <irods/rodsErrorTable.h>
+#include <irods/rsCloseCollection.hpp>
 #include <irods/rsModAVUMetadata.hpp>
 #include <irods/rsOpenCollection.hpp>
 #include <irods/rsReadCollection.hpp>
-#include <irods/rsCloseCollection.hpp>
-#include <irods/irods_virtual_path.hpp>
-#include <irods/dataObjRepl.h>
-#include <irods/dataObjTrim.h>
-#include <irods/physPath.hpp>
-#include <irods/apiNumber.h>
-#include "data_verification_utilities.hpp"
-#include <irods/irods_server_api_call.hpp>
-#include "exec_as_user.hpp"
 
 #undef LIST
 
-// =-=-=-=-=-=-=-
-// stl includes
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <string>
-
-// =-=-=-=-=-=-=-
-// boost includes
+#include <boost/algorithm/string.hpp>
 #include <boost/any.hpp>
 #include <boost/exception/all.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 
+#include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
-#include <irods/objDesc.hpp>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
 extern l1desc_t L1desc[NUM_L1_DESC];
 
 int _delayExec(
@@ -153,26 +151,27 @@ namespace {
 
     } // apply_data_retention_policy
 
-    void update_access_time_for_data_object(
-        rsComm_t*          _comm,
-        const std::string& _logical_path,
-        const std::string& _attribute) {
+    void update_access_time_for_data_object(const std::string& _logical_path, const std::string& _attribute)
+    {
+        namespace fs = irods::experimental::filesystem;
 
-        auto ts = std::to_string(std::time(nullptr));
-        modAVUMetadataInp_t avuOp{
-            "set",
-            "-d",
-            const_cast<char*>(_logical_path.c_str()),
-            const_cast<char*>(_attribute.c_str()),
-            const_cast<char*>(ts.c_str()),
-            ""};
+        const auto ts = std::to_string(std::time(nullptr));
 
-        auto status = rsModAVUMetadata(_comm, &avuOp);
-        if(status < 0) {
-            THROW(
-                status,
-                boost::format("failed to set access time for [%s]") %
-                _logical_path);
+        try {
+            irods::experimental::client_connection conn;
+            fs::client::set_metadata(fs::admin, conn, _logical_path, {_attribute, ts});
+        }
+        catch (const fs::filesystem_error& e) {
+            const auto* msg = "failed to set access time for [{}] - exception: [{}]";
+            THROW(e.code().value(), fmt::format(fmt::runtime(msg), _logical_path, e.what()));
+        }
+        catch (const irods::exception& e) {
+            const auto* msg = "failed to set access time for [{}] - exception: [{}]";
+            THROW(e.code(), fmt::format(fmt::runtime(msg), e.client_display_what()));
+        }
+        catch (const std::exception& e) {
+            const auto* msg = "failed to set access time for [{}] - exception: [{}]";
+            THROW(SYS_LIBRARY_ERROR, fmt::format(fmt::runtime(msg), e.what()));
         }
     } // update_access_time_for_data_object
 
@@ -188,7 +187,7 @@ namespace {
                 std::string lp{coll_ent->collName};
                 lp += vps;
                 lp += coll_ent->dataName;
-                update_access_time_for_data_object(_comm, lp, _attribute);
+                update_access_time_for_data_object(lp, _attribute);
             }
             else if(COLL_OBJ_T == coll_ent->objType) {
                 collInp_t coll_inp;
@@ -212,7 +211,7 @@ namespace {
         const std::string& _collection_type,
         const std::string& _attribute) {
         if(_collection_type.size() == 0) {
-            update_access_time_for_data_object(_comm, _object_path, _attribute);
+            update_access_time_for_data_object(_object_path, _attribute);
         }
         else {
             // register a collection
