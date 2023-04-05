@@ -181,36 +181,37 @@ namespace irods {
         return resc_map;
     } // get_tier_group_resource_ids_and_indices
 
-    std::string storage_tiering::get_leaf_resources_string(
-            const std::string& _resource_name) {
+    std::string storage_tiering::get_leaf_resources_string(const std::string& _resource_name)
+    {
         std::string leaf_id_str;
 
         // if the resource has no children then simply return
         resource_ptr root_resc;
-        error err = resc_mgr.resolve(_resource_name, root_resc);
-        if(!err.ok()) {
+        if (const auto err = resc_mgr.resolve(_resource_name, root_resc); !err.ok()) {
             THROW(err.code(), err.result());
         }
 
-        std::vector<resource_manager::leaf_bundle_t> leaf_bundles = 
-            resc_mgr.gather_leaf_bundles_for_resc(_resource_name);
-        for(const auto & bundle : leaf_bundles) {
-            for(const auto & leaf_id : bundle) {
-                leaf_id_str += 
-                    "'" + boost::str(boost::format("%s") % leaf_id) + "',";
-            } // for
-        } // for
+        std::vector<resource_manager::leaf_bundle_t> leaf_bundles = resc_mgr.gather_leaf_bundles_for_resc(_resource_name);
+        for (const auto& bundle : leaf_bundles) {
+            for (const auto& leaf_id : bundle) {
+                leaf_id_str += fmt::format("'{}',", leaf_id);
+            }
+        }
 
         // if there is no hierarchy
-        if(leaf_id_str.empty()) {
+        if (leaf_id_str.empty()) {
             rodsLong_t resc_id;
-            resc_mgr.hier_to_leaf_id(_resource_name, resc_id);
-            leaf_id_str =
-                "'" + boost::str(boost::format("%s") % resc_id) + "',";
+            if (const auto err = resc_mgr.hier_to_leaf_id(_resource_name, resc_id); !err.ok()) {
+                // FIXME What do we do here?
+            }
+            leaf_id_str = fmt::format("'{}',", resc_id);
+        }
+
+        if (!leaf_id_str.empty()) {
+            leaf_id_str.pop_back(); // Remove trailing comma.
         }
 
         return leaf_id_str;
-
     } // get_leaf_resources_string
 
     bool storage_tiering::get_preserve_replicas_for_resc(
@@ -297,7 +298,8 @@ namespace irods {
 
     std::string storage_tiering::get_data_movement_parameters_for_resource(
         rcComm_t*          _comm,
-        const std::string& _resource_name) {
+        const std::string& _resource_name)
+    {
         std::string params = "<INST_NAME>" + config_.instance_name + "</INST_NAME>";
 
         // if metadata is not present an irods::exception is thrown
@@ -358,7 +360,6 @@ namespace irods {
             params.c_str());
 
         return params;
-
     } // get_data_movement_parameters_for_resource
 
     resource_index_map storage_tiering::get_resource_map_for_group(
@@ -495,19 +496,20 @@ namespace irods {
     bool storage_tiering::skip_object_in_lower_tier(
         rcComm_t*          _comm,
         const std::string& _object_path,
-        const std::string& _partial_list) {
-        boost::filesystem::path p{_object_path};
-        std::string coll_name = p.parent_path().string();
-        std::string data_name = p.filename().string();
+        const std::string& _partial_list)
+    {
+        const boost::filesystem::path p{_object_path};
+        const auto coll_name = p.parent_path();
+        const auto data_name = p.filename();
 
-        // TODO The query below may need a rodsadmin too.
-        std::string qstr{boost::str(boost::format(
-            "SELECT RESC_ID WHERE DATA_NAME = '%s' AND COLL_NAME = '%s' AND DATA_RESC_ID IN (%s)")
-            % data_name % coll_name % _partial_list)};
+        const auto gql = fmt::format(
+            "select RESC_ID where DATA_NAME = '{}' and COLL_NAME = '{}' and DATA_RESC_ID in ({})",
+            data_name.c_str(), coll_name.c_str(), _partial_list);
 
-        query<rcComm_t> qobj{_comm, qstr};
-        bool skip = qobj.size() > 0;
-        if(skip) {
+        irods::experimental::client_connection conn;
+        irods::query q{static_cast<RcComm*>(conn), gql};
+        const bool skip = !q.empty();
+        if (skip) {
             rodsLog(
                 config_.data_transfer_log_level_value,
                 "irods::storage_tiering - skipping migration for [%s] in resource list [%s]",
@@ -523,7 +525,11 @@ namespace irods {
         const std::string& _group_name,
         const std::string& _partial_list,
         const std::string& _source_resource,
-        const std::string& _destination_resource) {
+        const std::string& _destination_resource)
+    {
+        rodsLog(LOG_NOTICE, "%s :: group=[%s], partial_list=[%s], src_resc=[%s], dst_resc=[%s]",
+                __func__, _group_name.c_str(), _partial_list.c_str(), _source_resource.c_str(), _destination_resource.c_str());
+
         using result_row = irods::query_processor<rcComm_t>::result_row;
 
         irods::thread_pool thread_pool{config_.number_of_scheduling_threads};
@@ -537,6 +543,8 @@ namespace irods {
                 const auto  violating_query_type   = query<rcComm_t>::convert_string_to_query_type(q_itr.second);
                 const auto& violating_query_string = q_itr.first;
                 auto job = [&](const result_row& _results) {
+                    rodsLog(LOG_NOTICE, "%s :: in job lambda.", __func__);
+
                     rodsLog(
                         config_.data_transfer_log_level_value,
                         "found %ld objects for resc [%s] with query [%s] type [%d]",
@@ -575,11 +583,10 @@ namespace irods {
                     auto proxy_conn = irods::proxy_connection();
                     rcComm_t* comm = proxy_conn.make(_results[2]);
 
-                    if(preserve_replicas) {
-                        if(skip_object_in_lower_tier(
-                               comm,
-                               object_path,
-                               _partial_list)) {
+                    if (preserve_replicas) {
+                        rodsLog(LOG_NOTICE, "%s :: Checking if object [%s] should be skipped.", __func__, object_path.c_str());
+                        if (skip_object_in_lower_tier(comm, object_path, _partial_list)) {
+                            rodsLog(LOG_NOTICE, "%s :: Skipping object [%s].", __func__, object_path.c_str());
                             return;
                         }
                     }
@@ -596,15 +603,16 @@ namespace irods {
                         get_verification_for_resc(comm, _destination_resource),
                         get_preserve_replicas_for_resc(comm, _source_resource),
                         get_data_movement_parameters_for_resource(comm, _source_resource));
-
                 }; // job
 
                 try {
+                    rodsLog(LOG_NOTICE, "%s :: Running violating query [%d] [%s] on thread pool.", __func__,
+                            violating_query_type, violating_query_string.c_str());
                     irods::query_processor<rcComm_t> qp(violating_query_string, job, query_limit, violating_query_type);
                     auto future = qp.execute(thread_pool, *_comm);
                     auto errors = future.get();
-                    if(errors.size() > 0) {
-                        for(auto& e : errors) {
+                    if (!errors.empty()) {
+                        for (const auto& e : errors) {
                             rodsLog(
                                 LOG_ERROR,
                                 "data movement scheduling failed - [%d]::[%s]",
@@ -675,39 +683,34 @@ namespace irods {
         const bool         _preserve_replicas,
         const std::string& _data_movement_params)
     {
-        if(object_has_migration_metadata_flag(_comm, _user_name, _object_path)) {
+        rodsLog(LOG_NOTICE, "%s :: Entered.", __func__);
+        if (object_has_migration_metadata_flag(_comm, _user_name, _object_path)) {
             return;
         }
 
         set_migration_metadata_flag_for_object(_comm, _user_name, _object_path);
 
-        nlohmann::json rule_obj =
-        {
-            {"policy_to_invoke", "irods_policy_enqueue_rule"}
-          , {"parameters",
-                {
-                    {"rule-engine-operation",     policy::data_movement}
-                  , {"rule-engine-instance-name", _plugin_instance_name}
-                  , {"group-name",                _group_name}
-                  , {"object-path",               _object_path}
-                  , {"user-name",                 _user_name}
-                  , {"source-replica-number",     _source_replica_number}
-                  , {"source-resource",           _source_resource}
-                  , {"destination-resource",      _destination_resource}
-                  , {"preserve-replicas",         _preserve_replicas}
-                  , {"verification-type",         _verification_type}
-                  , {"delay_conditions",          _data_movement_params}
-                }
-            }
-         };
+        nlohmann::json rule_obj{
+            {"policy_to_invoke", "irods_policy_enqueue_rule"},
+            {"parameters", {
+                {"rule-engine-operation",     policy::data_movement},
+                {"rule-engine-instance-name", _plugin_instance_name},
+                {"group-name",                _group_name},
+                {"object-path",               _object_path},
+                {"user-name",                 _user_name},
+                {"source-replica-number",     _source_replica_number},
+                {"source-resource",           _source_resource},
+                {"destination-resource",      _destination_resource},
+                {"preserve-replicas",         _preserve_replicas},
+                {"verification-type",         _verification_type},
+                {"delay_conditions",          _data_movement_params}
+            }}
+        };
 
         execMyRuleInp_t exec_inp{};
         rstrcpy(exec_inp.myRule, rule_obj.dump().c_str(), META_STR_LEN);
         msParamArray_t* out_arr{};
-        addKeyVal(
-            &exec_inp.condInput
-          , irods::KW_CFG_INSTANCE_NAME
-          , "irods_rule_engine_plugin-cpp_default_policy-instance");
+        addKeyVal(&exec_inp.condInput, irods::KW_CFG_INSTANCE_NAME, "irods_rule_engine_plugin-cpp_default_policy-instance");
 
         auto err = rcExecMyRule(_comm, &exec_inp, &out_arr);
 
@@ -726,34 +729,33 @@ namespace irods {
             _object_path.c_str(),
             _source_resource.c_str(),
             _destination_resource.c_str());
-
     } // queue_data_movement
 
     std::string storage_tiering::get_replica_number_for_resource(
         rcComm_t*          _comm,
         const std::string& _object_path,
-        const std::string& _resource_name) {
-        boost::filesystem::path p{_object_path};
-        std::string coll_name = p.parent_path().string();
-        std::string data_name = p.filename().string();
+        const std::string& _resource_name)
+    {
+        rodsLog(LOG_NOTICE, "%s :: Entered.", __func__);
+        const boost::filesystem::path p{_object_path};
+        const auto coll_name = p.parent_path();
+        const auto data_name = p.filename();
 
-        std::string leaf_ids = get_leaf_resources_string(_resource_name);
-        std::string qstr{boost::str(
-            boost::format("SELECT DATA_REPL_NUM WHERE DATA_NAME = '%s' AND COLL_NAME = '%s' AND DATA_RESC_ID IN (%s)")
-            % data_name
-            % coll_name
-            % leaf_ids)};
+        const auto leaf_ids = get_leaf_resources_string(_resource_name);
+        const auto gql = fmt::format(
+            "select DATA_REPL_NUM where DATA_NAME = '%s' and COLL_NAME = '%s' and DATA_RESC_ID in (%s)",
+            data_name.c_str(),
+            coll_name.c_str(),
+            leaf_ids);
 
-        query<rcComm_t> qobj{_comm, qstr};
+        irods::experimental::client_connection conn;
+        irods::query q{static_cast<RcComm*>(conn), gql};
 
-        if(qobj.size() == 0) {
-            THROW(
-                CAT_NO_ROWS_FOUND,
-                "failed to fetch user name and replica number");
+        if (q.empty()) {
+            THROW(CAT_NO_ROWS_FOUND, "failed to fetch user name and replica number");
         }
 
-        return qobj.front()[0];
-
+        return q.front()[0];
     } // get_replica_number_for_resource
 
     std::string storage_tiering::get_group_name_by_replica_number(
@@ -762,6 +764,7 @@ namespace irods {
         const std::string& _object_path,
         const std::string& _replica_number)
     {
+        rodsLog(LOG_NOTICE, "%s :: Entered.", __func__);
         boost::filesystem::path p{_object_path};
         const auto data_name = p.filename();
         const auto coll_name = p.parent_path();
@@ -788,6 +791,8 @@ namespace irods {
         const std::string& _object_path,
         const std::string& _user_name,
         const std::string& _source_resource) {
+
+        rodsLog(LOG_NOTICE, "%s :: Entered.", __func__);
 
         try {
             const auto source_replica_number = get_replica_number_for_resource(
