@@ -743,7 +743,7 @@ namespace irods {
 
         const auto leaf_ids = get_leaf_resources_string(_resource_name);
         const auto gql = fmt::format(
-            "select DATA_REPL_NUM where DATA_NAME = '%s' and COLL_NAME = '%s' and DATA_RESC_ID in (%s)",
+            "select DATA_REPL_NUM where DATA_NAME = '{}' and COLL_NAME = '{}' and DATA_RESC_ID in ({})",
             data_name.c_str(),
             coll_name.c_str(),
             leaf_ids);
