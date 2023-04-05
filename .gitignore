@@ -1,0 +1,6 @@
+*.swp
+*.vim
+
+.cache/
+
+compile_commands.json
