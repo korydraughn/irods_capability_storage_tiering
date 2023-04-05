@@ -13,6 +13,7 @@
 #include <irods/irods_re_ruleexistshelper.hpp>
 #include <irods/irods_resource_backport.hpp>
 #include <irods/irods_server_api_call.hpp>
+#include <irods/irods_state_table.h>
 #include <irods/irods_virtual_path.hpp>
 #include <irods/objDesc.hpp>
 #include <irods/physPath.hpp>
@@ -349,8 +350,10 @@ namespace {
         const std::string& _source_resource,
         const std::string& _destination_resource,
         const bool         _preserve_replicas,
-        const std::string& _verification_type) {
-
+        const std::string& _verification_type)
+    {
+        // TODO This is where the Sanger issue occurs. To understand why, see comment
+        // about apply_data_movement_policy().
         replicate_object_to_resource(
             _comm,
             _instance_name,
@@ -365,7 +368,7 @@ namespace {
                             _object_path,
                             _source_resource,
                             _destination_resource);
-        if(!verified) {
+        if (!verified) {
             THROW(
                 UNMATCHED_KEY_OR_INDEX,
                 boost::format("verification failed for [%s] on [%s]")
@@ -676,77 +679,88 @@ irods::error exec_rule_expression(
     irods::default_re_ctx&,
     const std::string&     _rule_text,
     msParamArray_t*        _ms_params,
-    irods::callback        _eff_hdlr) {
+    irods::callback        _eff_hdlr)
+{
     using json = nlohmann::json;
     ruleExecInfo_t* rei{};
-    const auto err = _eff_hdlr("unsafe_ms_ctx", &rei);
-    if(!err.ok()) {
+    if (const auto err = _eff_hdlr("unsafe_ms_ctx", &rei); !err.ok()) {
         return err;
     }
 
     try {
         const auto rule_obj = json::parse(_rule_text);
-        if(rule_obj.contains("rule-engine-operation") &&
-           irods::storage_tiering::policy::storage_tiering == rule_obj.at("rule-engine-operation")) {
+        const auto iter = rule_obj.find("rule-engine-operation");
+
+        if (iter == std::end(rule_obj)) {
+            return CODE(RULE_ENGINE_CONTINUE);
+        }
+
+        if (irods::storage_tiering::policy::storage_tiering == iter->get_ref<const std::string&>()) {
             try {
                 auto proxy_conn = irods::proxy_connection();
                 rcComm_t* comm = proxy_conn.make();
 
                 irods::storage_tiering st{comm, rei, plugin_instance_name};
-                for(const auto& group : rule_obj["storage-tier-groups"]) {
-                    st.apply_policy_for_tier_group(group);
+                for (const auto& group : rule_obj["storage-tier-groups"]) {
+                    st.apply_policy_for_tier_group(group.get_ref<const std::string&>());
                 }
             }
-            catch(const irods::exception& _e) {
+            catch (const irods::exception& e) {
                 printErrorStack(&rei->rsComm->rError);
-                return ERROR(
-                        _e.code(),
-                        _e.what());
+                return ERROR(e.code(), e.what());
             }
         }
-        else if(rule_obj.contains("rule-engine-operation") &&
-                irods::storage_tiering::policy::data_movement ==
-                rule_obj.at("rule-engine-operation")) {
+        else if (irods::storage_tiering::policy::data_movement == iter->get_ref<const std::string&>()) {
             try {
                 // proxy for provided user name
-                const std::string& user_name = rule_obj["user-name"];
+                const auto& user_name = rule_obj.at("user-name").get_ref<const std::string&>();
                 auto& pin = plugin_instance_name;
 
                 auto proxy_conn = irods::proxy_connection();
-                rcComm_t* comm = proxy_conn.make( rule_obj["user-name"]);
+                rcComm_t* comm = proxy_conn.make(rule_obj.at("user-name").get_ref<const std::string&>());
 
-                auto status = irods::exec_as_user(comm, user_name, [& pin, & rule_obj](auto& comm) -> int{
-                                    return apply_data_movement_policy(
-                                        comm,
-                                        plugin_instance_name,
-                                        rule_obj["object-path"],
-                                        rule_obj["user-name"],
-                                        rule_obj["source-replica-number"],
-                                        rule_obj["source-resource"],
-                                        rule_obj["destination-resource"],
-                                        rule_obj["preserve-replicas"],
-                                        rule_obj["verification-type"]);
-                                    });
+                // FIXME This is a problem!
+                //
+                // If "user_name" does not have the appropriate permissions (i.e. own), then
+                // data movement is impossible. This is can be reproduced by having a user with read
+                // permission attempt a read while the data object is in a later tier.
+                //
+                // This is most likely why replication fails for Sanger.
+                //
+                // Q. How do we solve this?
+                // A. Could iRODS introduce a special user which has permission to do anything without
+                //    needing explicit permission? This user would be special in that no one can log in
+                //    as this user and no one can become this user. That would avoid the need for things
+                //    such as scoped_permission, etc.
+                auto status = irods::exec_as_user(comm, user_name, [&pin, &rule_obj](auto& comm) -> int {
+                    return apply_data_movement_policy(
+                        comm,
+                        plugin_instance_name,
+                        rule_obj["object-path"].get_ref<const std::string&>(),
+                        rule_obj["user-name"].get_ref<const std::string&>(),
+                        rule_obj["source-replica-number"].get_ref<const std::string&>(),
+                        rule_obj["source-resource"].get_ref<const std::string&>(),
+                        rule_obj["destination-resource"].get_ref<const std::string&>(),
+                        rule_obj["preserve-replicas"].get<bool>(),
+                        rule_obj["verification-type"].get_ref<const std::string&>());
+                });
 
                 irods::storage_tiering st{comm, rei, plugin_instance_name};
-                status = irods::exec_as_user(comm, user_name, [& st, & rule_obj](auto& comm) -> int{
-                                    return apply_tier_group_metadata_policy(
-                                        st,
-                                        rule_obj["group-name"],
-                                        rule_obj["object-path"],
-                                        rule_obj["user-name"],
-                                        rule_obj["source-replica-number"],
-                                        rule_obj["source-resource"],
-                                        rule_obj["destination-resource"]);
-                                    });
+                status = irods::exec_as_user(comm, user_name, [&st, &rule_obj](auto& comm) -> int {
+                    return apply_tier_group_metadata_policy(
+                        st,
+                        rule_obj["group-name"].get_ref<const std::string&>(),
+                        rule_obj["object-path"].get_ref<const std::string&>(),
+                        rule_obj["user-name"].get_ref<const std::string&>(),
+                        rule_obj["source-replica-number"].get_ref<const std::string&>(),
+                        rule_obj["source-resource"].get_ref<const std::string&>(),
+                        rule_obj["destination-resource"].get_ref<const std::string&>());
+                });
             }
-            catch(const irods::exception& _e) {
-                printErrorStack(&rei->rsComm->rError);
-                return ERROR(
-                        _e.code(),
-                        _e.what());
+            catch (const irods::exception& e) {
+                printErrorStack(&rei->rsComm->rError); // TODO This will not work.
+                return ERROR(e.code(), e.what());
             }
-
         }
         else {
             return CODE(RULE_ENGINE_CONTINUE);
@@ -774,7 +788,6 @@ irods::error exec_rule_expression(
     }
 
     return SUCCESS();
-
 } // exec_rule_expression
 
 extern "C"

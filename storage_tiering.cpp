@@ -836,9 +836,8 @@ namespace irods {
         }
     } // migrate_object_to_minimum_restage_tier
 
-    std::string storage_tiering::make_partial_list(
-            resource_index_map::iterator _itr,
-            resource_index_map::iterator _end) {
+    std::string storage_tiering::make_partial_list(resource_index_map::iterator _itr, resource_index_map::iterator _end)
+    {
         ++_itr; // skip source resource
 
         std::string partial_list{};
@@ -847,16 +846,12 @@ namespace irods {
         }
 
         return partial_list;
-
     } // make_partial_list
 
-    void storage_tiering::apply_policy_for_tier_group(
-        const std::string& _group) {
-
-        resource_index_map rescs = get_resource_map_for_group(
-                                             comm_,
-                                             _group);
-        if(rescs.empty()) {
+    void storage_tiering::apply_policy_for_tier_group(const std::string& _group)
+    {
+        resource_index_map rescs = get_resource_map_for_group(comm_, _group);
+        if (rescs.empty()) {
             rodsLog(
                 LOG_ERROR,
                 "%s :: no resources found for group [%s]",
@@ -866,7 +861,7 @@ namespace irods {
         }
 
         auto resc_itr = rescs.begin();
-        for( ; resc_itr != rescs.end(); ++resc_itr) {
+        for ( ; resc_itr != rescs.end(); ++resc_itr) {
             const auto partial_list{make_partial_list(resc_itr, rescs.end())};
             auto next_itr = resc_itr;
             ++next_itr;
@@ -879,9 +874,7 @@ namespace irods {
                 partial_list,
                 resc_itr->second,
                 next_itr->second);
-
         } // for resc
-
     } // apply_policy_for_tier_group
 
     void storage_tiering::set_migration_metadata_flag_for_object(
