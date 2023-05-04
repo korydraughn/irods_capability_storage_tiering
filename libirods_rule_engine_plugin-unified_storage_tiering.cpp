@@ -68,9 +68,6 @@ namespace {
                 l1_idx = &l1 - L1desc;
             }
         }
-        rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
-        rodsLog(LOG_NOTICE, "[%s:%d] (_rei->rsComm) RsComm::client=[%s#%s]", __func__, __LINE__, _rei->rsComm->clientUser.userName, _rei->rsComm->clientUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] (_rei->rsComm) RsComm::proxy=[%s#%s]",  __func__, __LINE__, _rei->rsComm->proxyUser.userName,  _rei->rsComm->proxyUser.rodsZone);
 
         if(nullptr == obj_info) {
             rodsLog(LOG_NOTICE, "[%s:%d] Could not find DataObjInfo by that logical path.", __func__, __LINE__);

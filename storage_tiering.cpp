@@ -69,8 +69,12 @@ namespace irods {
         const std::string& _meta_attr_name,
         const std::string& _object_path ) {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        rodsLog(LOG_NOTICE, "[%s:%d] (input) RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
+        rodsLog(LOG_NOTICE, "[%s:%d] (input) RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _meta_attr_name=[%s]", __func__, __LINE__, _meta_attr_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
 
@@ -104,6 +108,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _meta_attr_name=[%s]", __func__, __LINE__, _meta_attr_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         std::string query_str {
@@ -131,6 +139,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _meta_attr_name=[%s]", __func__, __LINE__, _meta_attr_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         std::string query_str {
@@ -157,12 +169,16 @@ namespace irods {
     resource_index_map storage_tiering::get_tier_group_resource_ids_and_indices(
         rcComm_t*          _comm,
         const std::string& _group_name) {
-        resource_index_map resc_map;
-        std::string query_str{
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _group_name=[%s]", __func__, __LINE__, _group_name.c_str());
+        resource_index_map resc_map;
+        std::string query_str{
             boost::str(
                     boost::format(
                         "SELECT RESC_ID, META_RESC_ATTR_UNITS WHERE META_RESC_ATTR_NAME = '%s' and META_RESC_ATTR_VALUE = '%s'") %
@@ -200,8 +216,14 @@ namespace irods {
     std::string storage_tiering::get_leaf_resources_string(
             const std::string& _resource_name) {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (comm_) {
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, comm_->clientUser.userName, comm_->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, comm_->proxyUser.userName,  comm_->proxyUser.rodsZone);
+        }
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         std::string leaf_id_str;
 
@@ -239,6 +261,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         try {
             std::string pres = get_metadata_for_resource(
@@ -263,6 +289,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         try {
             std::string ver = get_metadata_for_resource(
@@ -283,6 +313,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _group_name=[%s]", __func__, __LINE__, _group_name.c_str());
         const auto idx_resc_map = get_tier_group_resource_ids_and_indices(
                                       _comm,
@@ -333,6 +367,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         std::string params = "<INST_NAME>" + config_.instance_name + "</INST_NAME>";
 
@@ -403,6 +441,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _group=[%s]", __func__, __LINE__, _group.c_str());
 
         resource_index_map groups;
@@ -431,6 +473,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         try {
             std::time_t now = std::time(nullptr);
@@ -462,6 +508,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
 
         const auto tier_time = get_tier_time_for_resc(_comm, _resource_name);
@@ -518,6 +568,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         try {
             const auto object_limit = get_metadata_for_resource(
@@ -551,6 +605,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _partial_list=[%s]", __func__, __LINE__, _partial_list.c_str());
         boost::filesystem::path p{_object_path};
@@ -582,6 +640,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _group_name=[%s]", __func__, __LINE__, _group_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _partial_list=[%s]", __func__, __LINE__, _partial_list.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _source_resource=[%s]", __func__, __LINE__, _source_resource.c_str());
@@ -744,6 +806,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _plugin_instance_name=[%s]", __func__, __LINE__, _plugin_instance_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _group_name=[%s]", __func__, __LINE__, _group_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
@@ -817,6 +883,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
         boost::filesystem::path p{_object_path};
@@ -850,9 +920,13 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _attribute_name=[%s]", __func__, __LINE__, _attribute_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
-        rodsLog(LOG_NOTICE, "[%s:%d] _resource_name=[%s]", __func__, __LINE__, _resource_name.c_str());
+        rodsLog(LOG_NOTICE, "[%s:%d] _replica_number=[%s]", __func__, __LINE__, _replica_number.c_str());
         boost::filesystem::path p{_object_path};
         std::string data_name = p.filename().string();
         std::string coll_name = p.parent_path().string();
@@ -881,8 +955,14 @@ namespace irods {
         const std::string& _user_name,
         const std::string& _source_resource) {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (comm_) {
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, comm_->clientUser.userName, comm_->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, comm_->proxyUser.userName,  comm_->proxyUser.rodsZone);
+        }
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _user_name=[%s]", __func__, __LINE__, _user_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _source_resource=[%s]", __func__, __LINE__, _source_resource.c_str());
@@ -946,9 +1026,15 @@ namespace irods {
     void storage_tiering::apply_policy_for_tier_group(
         const std::string& _group) {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
-        rodsLog(LOG_NOTICE, "[%s:%d] _group=[%s]", __func__, __LINE__, group.c_str());
+        if (comm_) {
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, comm_->clientUser.userName, comm_->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, comm_->proxyUser.userName,  comm_->proxyUser.rodsZone);
+        }
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
+        rodsLog(LOG_NOTICE, "[%s:%d] _group=[%s]", __func__, __LINE__, _group.c_str());
 
         resource_index_map rescs = get_resource_map_for_group(
                                              comm_,
@@ -988,6 +1074,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _user_name=[%s]", __func__, __LINE__, _user_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         auto access_time = get_metadata_for_data_object(
@@ -1026,6 +1116,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _user_name=[%s]", __func__, __LINE__, _user_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         auto access_time = get_metadata_for_data_object(
@@ -1065,6 +1159,10 @@ namespace irods {
         rodsLog(LOG_NOTICE, ">>>> Entered [%s:%d]", __func__, __LINE__);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::client=[%s#%s]", __func__, __LINE__, _comm->clientUser.userName, _comm->clientUser.rodsZone);
         rodsLog(LOG_NOTICE, "[%s:%d] RcComm::proxy=[%s#%s]",  __func__, __LINE__, _comm->proxyUser.userName,  _comm->proxyUser.rodsZone);
+        if (rei_ && rei_->rsComm) {
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->client=[%s#%s]", __func__, __LINE__, rei_->rsComm->clientUser.userName, rei_->rsComm->clientUser.rodsZone);
+            rodsLog(LOG_NOTICE, "[%s:%d] (member var) rei_->rsComm->proxy=[%s#%s]",  __func__, __LINE__, rei_->rsComm->proxyUser.userName,  rei_->rsComm->proxyUser.rodsZone);
+        }
         rodsLog(LOG_NOTICE, "[%s:%d] _user_name=[%s]", __func__, __LINE__, _user_name.c_str());
         rodsLog(LOG_NOTICE, "[%s:%d] _object_path=[%s]", __func__, __LINE__, _object_path.c_str());
         boost::filesystem::path p{_object_path};
