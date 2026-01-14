@@ -93,7 +93,7 @@ jobs:
         #     plugin_directory_symlink_name: Ubuntu_22
         container_os: ['ubuntu-22.04']
         container_db: ['postgres-16']
-        irods_pkg_version: ['5.0.2-0']
+        irods_pkg_version: ['5.0.2-0~jammy']
         os_symlink_dir: ['Ubuntu_22']
 
     runs-on: ubuntu-latest
@@ -101,11 +101,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Install prerequisite packages
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -qq lsb-release
 
       - name: Set up python for iRODS testing environment
         uses: actions/setup-python@v6
@@ -150,7 +145,7 @@ jobs:
           python run_plugin_tests.py \
             "${GITHUB_REPOSITORY#${GITHUB_REPOSITORY_OWNER}/}" \
             --project-directory projects/${{ matrix.container_os }}/${{ matrix.container_os }}-${{ matrix.container_db }} \
-            --irods-package-version ${{ matrix.irods_pkg_version }}~$(lsb_release -sc) \
+            --irods-package-version ${{ matrix.irods_pkg_version }} \
             --plugin-package-directory .. \
             --discard-logs \
             -vv
