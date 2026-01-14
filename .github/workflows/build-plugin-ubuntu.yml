@@ -1,0 +1,149 @@
+name: build-plugin-ubuntu
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build (w/ release packages) - ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: ['ubuntu:22.04']
+        irods_pkg_version: ['5.0.2-0']
+        #os: ['ubuntu:22.04', 'ubuntu:24.04']
+        #irods_pkg_version: ['5.0.0-0', '5.0.2-0']
+
+    runs-on: ubuntu-latest
+    container: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install prerequiste packages
+        run: |
+          apt-get update -qq
+          apt-get install -qq \
+            build-essential \
+            cmake \
+            gcc \
+            libcurl4-gnutls-dev \
+            libfmt-dev \
+            libssl-dev \
+            lsb-release \
+            ninja-build \
+            nlohmann-json3-dev \
+            wget
+
+      - name: Setup iRODS externals package repository
+        run: |
+          mkdir -p /etc/apt/keyrings
+          wget -qO - https://packages.irods.org/irods-signing-key.asc | \
+            gpg \
+              --no-options \
+              --no-default-keyring \
+              --no-auto-check-trustdb \
+              --homedir /dev/null \
+              --no-keyring \
+              --import-options import-export \
+              --output /etc/apt/keyrings/renci-irods-archive-keyring.pgp \
+              --import
+          echo "deb [signed-by=/etc/apt/keyrings/renci-irods-archive-keyring.pgp arch=amd64] https://packages.irods.org/apt/ $(lsb_release -sc) main" | \
+            tee /etc/apt/sources.list.d/renci-irods.list
+
+      - name: Install iRODS development packages
+        run: |
+          apt-get update -qq
+
+          codename=$(lsb_release -sc)
+          apt-get install -qq \
+            irods-externals-clang16.0.6-0 \
+            irods-dev=${{ matrix.irods_pkg_version }}~${codename} \
+            irods-runtime=${{ matrix.irods_pkg_version }}~${codename}
+
+      - name: Build and package
+        run: |
+          mkdir _build
+          cmake -G Ninja -B _build -S .
+          cmake --build _build --target package
+
+      - name: List contents of build directory
+        run: ls -l _build
+
+      - name: Upload build output for dependent jobs
+        uses: actions/upload-artifact@v6
+        with:
+          name: build_output
+          path: _build
+          retention-days: 1
+          overwrite: true
+
+  run_tests:
+    needs: build
+
+    name: Run tests - ${{ matrix.container_os }}, ${{ matrix.irods_pkg_version }}
+
+    strategy:
+      matrix:
+        # TODO use "include" to define pairs/tuples of os/irods-vers/etc to keep things simple.
+        # include:
+        #   - container_os: ubuntu-22.04
+        #     container_db: postgres-16
+        #     irods_version: 5.0.0-0
+        #     plugin_directory_symlink_name: Ubuntu_22
+        container_os: ['ubuntu-22.04']
+        container_db: ['postgres-16']
+        irods_pkg_version: ['5.0.0-0']
+        os_symlink_dir: ['Ubuntu_22']
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up python for iRODS testing environment
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.8'
+
+      - name: Download build output
+        uses: actions/download-artifact@v7
+        with:
+          name: build_output
+          path: _build
+
+      - name: Create symlink to directory containing packages
+        run: |
+          ls -l
+          ls -l _build
+
+          # TODO This step can be avoided by setting "path" to the target directory name
+          # in the download-artifact step.
+          packages_dir="${{ matrix.os_symlink_dir }}"
+          ln -s _build "$packages_dir"
+          ls -l "$packages_dir"
+
+      - name: Set up docker compose
+        uses: docker/setup-compose-action@v1
+
+      - name: Set up iRODS testing environment
+        run: |
+          git clone https://github.com/irods/irods_testing_environment
+          cd irods_testing_environment
+          python3 -m venv venv_testing_env
+          . venv_testing_env/bin/activate
+          python --version
+          pip install docker-compose GitPython
+          pip install docker'<7' requests==2.26.0
+          pip freeze
+
+      - name: Run tests
+        run: |
+          cd irods_testing_environment
+          . venv_testing_env/bin/activate
+          python run_plugin_tests.py \
+            "${GITHUB_REPOSITORY#${GITHUB_REPOSITORY_OWNER}/}" \
+            --project-directory projects/${{ matrix.container_os }}/${{ matrix.container_os }}-${{ matrix.container_db }} \
+            --plugin-package-directory .. \
+            -vv
