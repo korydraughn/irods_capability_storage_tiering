@@ -9,17 +9,14 @@ jobs:
     strategy:
       matrix:
         include:
+          # EL8
+          - container: almalinux:8
+            irods_package_version: 4.3.4-0.el8
+            upload_artifact_suffix: almalinux_8-4.3.4-0
           # EL9
           - container: rockylinux/rockylinux:9
-            irods_package_version: 5.0.0-0.el9
-            upload_artifact_suffix: rockylinux_9-5.0.0-0
-          - container: rockylinux/rockylinux:9
-            irods_package_version: 5.0.2-0.el9
-            upload_artifact_suffix: rockylinux_9-5.0.2-0
-          # EL10
-          - container: rockylinux/rockylinux:10
-            irods_package_version: 5.0.2-0.el10
-            upload_artifact_suffix: rockylinux_10-5.0.2-0
+            irods_package_version: 4.3.4-0.el9
+            upload_artifact_suffix: rockylinux_9-4.3.4-0
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
@@ -39,6 +36,11 @@ jobs:
             rpm-build \
             sudo \
             wget
+
+          if [[ "${{ matrix.container }}" == "almalinux:8" ]]; then
+            dnf config-manager --set-enabled powertools
+          fi
+
           dnf install -y \
             cmake \
             python3-devel \
@@ -87,20 +89,16 @@ jobs:
     strategy:
       matrix:
         include:
+          # EL8
+          - testing_env_os: almalinux-8
+            irods_package_version: 4.3.4-0.el8
+            plugin_package_dir: 'Almalinux_8'
+            download_artifact_suffix: almalinux_8-4.3.4-0
           # EL9
           - testing_env_os: rockylinux-9
-            irods_package_version: 5.0.0-0.el9
+            irods_package_version: 4.3.4-0.el9
             plugin_package_dir: 'Rocky linux_9'
-            download_artifact_suffix: rockylinux_9-5.0.0-0
-          - testing_env_os: rockylinux-9
-            irods_package_version: 5.0.2-0.el9
-            plugin_package_dir: 'Rocky linux_9'
-            download_artifact_suffix: rockylinux_9-5.0.2-0
-          # EL10
-          - testing_env_os: rockylinux-10
-            irods_package_version: 5.0.2-0.el10
-            plugin_package_dir: 'Rocky linux_10'
-            download_artifact_suffix: rockylinux_10-5.0.2-0
+            download_artifact_suffix: rockylinux_9-4.3.4-0
 
     runs-on: ubuntu-latest
 

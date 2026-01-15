@@ -9,17 +9,14 @@ jobs:
     strategy:
       matrix:
         include:
+          # Debian 11
+          - container: debian:11
+            irods_package_version: 4.3.4-0
+            upload_artifact_suffix: debian_11-4.3.4-0
           # Debian 12
           - container: debian:12
-            irods_package_version: 5.0.0-0
-            upload_artifact_suffix: debian_12-5.0.0-0
-          - container: debian:12
-            irods_package_version: 5.0.2-0
-            upload_artifact_suffix: debian_12-5.0.2-0
-          # Debian 13
-          - container: debian:13
-            irods_package_version: 5.0.2-0
-            upload_artifact_suffix: debian_13-5.0.2-0
+            irods_package_version: 4.3.4-0
+            upload_artifact_suffix: debian_12-4.3.4-0
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
@@ -71,7 +68,11 @@ jobs:
       - name: Install python iRODS CI utilities
         shell: bash
         run: |
-            python3 -m pip install --break-system-packages git+https://github.com/irods/irods_python_ci_utilities.git@main
+            if [[ "${{ matrix.container }}" == "debian:12" ]]; then
+              python3 -m pip install --break-system-packages git+https://github.com/irods/irods_python_ci_utilities.git@main
+            else
+              python3 -m pip install git+https://github.com/irods/irods_python_ci_utilities.git@main
+            fi
 
       - name: Build and package
         run: |
@@ -97,20 +98,16 @@ jobs:
     strategy:
       matrix:
         include:
+          # Debian 11
+          - testing_env_os: debian-11
+            irods_package_version: 4.3.4-0~bullseye
+            plugin_package_dir: 'Debian gnu_linux_11'
+            download_artifact_suffix: debian_11-4.3.4-0
           # Debian 12
           - testing_env_os: debian-12
-            irods_package_version: 5.0.0-0~bookworm
+            irods_package_version: 4.3.4-0~bookworm
             plugin_package_dir: 'Debian gnu_linux_12'
-            download_artifact_suffix: debian_12-5.0.0-0
-          - testing_env_os: debian-12
-            irods_package_version: 5.0.2-0~bookworm
-            plugin_package_dir: 'Debian gnu_linux_12'
-            download_artifact_suffix: debian_12-5.0.2-0
-          # Debian 13
-          - testing_env_os: debian-13
-            irods_package_version: 5.0.2-0~trixie
-            plugin_package_dir: 'Debian gnu_linux_13'
-            download_artifact_suffix: debian_13-5.0.2-0
+            download_artifact_suffix: debian_12-4.3.4-0
 
     runs-on: ubuntu-latest
 
